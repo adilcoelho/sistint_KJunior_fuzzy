@@ -31,8 +31,8 @@ from skfuzzy import control as ctrl
 distanciaEsq = ctrl.Antecedent(np.arange(0, 25, 0.01), 'distanciaEsq')
 distanciaDir = ctrl.Antecedent(np.arange(0, 25, 0.01), 'distanciaDir')
 distanciaFre = ctrl.Antecedent(np.arange(0, 25, 0.01), 'distanciaFre')
-velocidadeEsq = ctrl.Consequent(np.arange(0, 10, 0.5), 'velocidadeEsq')
-velocidadeDir = ctrl.Consequent(np.arange(0, 10, 0.5), 'velocidadeDir')
+velocidadeEsq = ctrl.Consequent(np.arange(-1, 10, 0.5), 'velocidadeEsq')
+velocidadeDir = ctrl.Consequent(np.arange(-1, 10, 0.5), 'velocidadeDir')
 
 # Cria as funções de pertinência usando tipos variados
 distanciaEsq['perto'] = fuzz.trapmf(distanciaEsq.universe, [0, 0, 0.5, 2])
@@ -47,26 +47,30 @@ distanciaFre['perto'] = fuzz.trapmf(distanciaFre.universe, [0, 0, 0.5, 2])
 distanciaFre['media'] = fuzz.trimf(distanciaFre.universe, [0.5, 2, 10])
 distanciaFre['longe'] = fuzz.trapmf(distanciaFre.universe, [2, 10, 25, 25])
 
+velocidadeEsq['negativa'] = fuzz.trimf(velocidadeEsq.universe, [-1, -1, 0])
 velocidadeEsq['baixa'] = fuzz.trimf(velocidadeEsq.universe, [0, 0, 0.5])
 velocidadeEsq['media'] = fuzz.trimf(velocidadeEsq.universe, [0.5, 5, 8])
 velocidadeEsq['alta'] = fuzz.trapmf(velocidadeEsq.universe, [5, 8, 10, 10])
 
+velocidadeDir['negativa'] = fuzz.trimf(velocidadeDir.universe, [-1, -1, 0])
 velocidadeDir['baixa'] = fuzz.trimf(velocidadeDir.universe, [0, 0, 0.5])
 velocidadeDir['media'] = fuzz.trimf(velocidadeDir.universe, [0.5, 5, 8])
 velocidadeDir['alta'] = fuzz.trapmf(velocidadeDir.universe, [5, 8, 10, 10])
 
 """### Criando as regras de decisão difusas"""
 
-rule1 = ctrl.Rule(distanciaEsq['longe'], velocidadeEsq['alta'])
-rule2 = ctrl.Rule(distanciaDir['longe'], velocidadeDir['alta'])
-rule3 = ctrl.Rule(distanciaEsq['media'], velocidadeEsq['media'])
-rule4 = ctrl.Rule(distanciaDir['media'], velocidadeDir['media'])
-rule5 = ctrl.Rule(distanciaEsq['perto'], velocidadeEsq['baixa'])
-rule6 = ctrl.Rule(distanciaDir['perto'], velocidadeDir['baixa'])
+rule1 = ctrl.Rule(distanciaEsq['longe'], velocidadeDir['alta'])
+rule2 = ctrl.Rule(distanciaDir['longe'], velocidadeEsq['alta'])
+rule3 = ctrl.Rule(distanciaEsq['media'], velocidadeDir['media'])
+rule4 = ctrl.Rule(distanciaDir['media'], velocidadeEsq['media'])
+rule5 = ctrl.Rule(distanciaEsq['perto'], velocidadeDir['baixa'])
+rule6 = ctrl.Rule(distanciaDir['perto'], velocidadeEsq['baixa'])
+rule7 = ctrl.Rule(distanciaFre['perto'], velocidadeDir['negativa'])
+rule8 = ctrl.Rule(distanciaFre['perto'], velocidadeEsq['negativa'])
 
 """### Criando e simulando um controlador nebuloso"""
 
-velocidade_ctrl = ctrl.ControlSystem([rule1, rule2, rule3, rule4, rule5, rule6])
+velocidade_ctrl = ctrl.ControlSystem([rule1, rule2, rule3, rule4, rule5, rule6, rule7, rule8])
 velocidade_simulador = ctrl.ControlSystemSimulation(velocidade_ctrl)
 
 #definicoes iniciais
@@ -88,33 +92,34 @@ braitenbergR=[-1.6,-1.4,-1.2,-1,-0.8,-0.6,-0.4,-0.2, 0.0,0.0,0.0,0.0,0.0,0.0,0.0
 v0=2
 
 clientID = vrep.simxStart(serverIP,serverPort,True,True,2000,5)
-if clientID <> -1:
+if clientID != -1:
     print ('Servidor conectado!')
 
     # inicialização dos motores
-    erro, leftMotorHandle = vrep.simxGetObjectHandle(clientID,'Pioneer_p3dx_leftMotor',vrep.simx_opmode_oneshot_wait)
-    if erro <> 0:
-        print 'Handle do motor esquerdo nao encontrado!'
+    erro, leftMotorHandle = vrep.simxGetObjectHandle(clientID,'KJunior_motorLeft',vrep.simx_opmode_oneshot_wait)
+    if erro != 0:
+        print ('Handle do motor esquerdo nao encontrado!')
     else:
-        print 'Conectado ao motor esquerdo!'
+        print ('Conectado ao motor esquerdo!')
 
-    erro, rightMotorHandle = vrep.simxGetObjectHandle(clientID,'Pioneer_p3dx_rightMotor',vrep.simx_opmode_oneshot_wait)
-    if erro <> 0:
-        print 'Handle do motor direito nao encontrado!'
+    erro, rightMotorHandle = vrep.simxGetObjectHandle(clientID,'KJunior_motorRight',vrep.simx_opmode_oneshot_wait)
+    if erro != 0:
+        print ('Handle do motor direito nao encontrado!')
     else:
-        print 'Conectado ao motor direito!'
+        print ('Conectado ao motor direito!')
 
     #inicialização dos sensores (remoteApi)
-    for i in range(16):
-        erro, sensorHandle[i] = vrep.simxGetObjectHandle(clientID,"Pioneer_p3dx_ultrasonicSensor%d" % (i+1),vrep.simx_opmode_oneshot_wait)
-        if erro <> 0:
-            print "Handle do sensor Pioneer_p3dx_ultrasonicSensor%d nao encontrado!" % (i+1)
+    for i in range(5):
+        erro, sensorHandle[i] = vrep.simxGetObjectHandle(clientID,"KJunior_proxSensor%d" % (i+1),vrep.simx_opmode_oneshot_wait)
+        if erro != 0:
+            print ("Handle do sensor KJunior_proxSensor%d nao encontrado!" % (i+1))
         else:
-            print "Conectado ao sensor Pioneer_p3dx_ultrasonicSensor%d!" % (i+1)
+            print ("Conectado ao sensor KJunior_proxSensor%d!" % (i+1))
             erro, state, coord, detectedObjectHandle, detectedSurfaceNormalVector = vrep.simxReadProximitySensor(clientID, sensorHandle[i],vrep.simx_opmode_streaming)
 
     #desvio e velocidade do robo
     while vrep.simxGetConnectionId(clientID) != -1:
+        dist = np.zeros(5)
         for i in range(5):
             erro, state, coord, detectedObjectHandle, detectedSurfaceNormalVector = vrep.simxReadProximitySensor(clientID, sensorHandle[i],vrep.simx_opmode_buffer)
             if erro == 0:
@@ -126,11 +131,16 @@ if clientID <> -1:
             else:
                 dist[i] = 0
 
-        distEsq = min(dist[0] dist[1])
-        distDir = min(dist[2] dist[3])
+        distEsq = min(dist[0], dist[1])
+        distFre = dist[2]
+        distDir = min(dist[3], dist[4])
+
+        print(distEsq)
+        print(distDir)
 
         # Entrando com alguns valores para qualidade da distanciaEsq e do serviço
         velocidade_simulador.input['distanciaEsq'] = distEsq
+        velocidade_simulador.input['distanciaFre'] = distFre
         velocidade_simulador.input['distanciaDir'] = distDir
 
         # Computando o resultado
@@ -144,6 +154,6 @@ if clientID <> -1:
         erro = vrep.simxSetJointTargetVelocity(clientID, rightMotorHandle, vRight, vrep.simx_opmode_streaming)
 
     vrep.simxFinish(clientID) # fechando conexao com o servidor
-    print 'Conexao fechada!'
+    print ('Conexao fechada!')
 else:
-    print 'Problemas para conectar o servidor!'
+    print ('Problemas para conectar o servidor!')
