@@ -43,19 +43,19 @@ distanciaDir['perto'] = fuzz.trapmf(distanciaDir.universe, [0, 0, 0.5, 2])
 distanciaDir['media'] = fuzz.trimf(distanciaDir.universe, [0.5, 2, 10])
 distanciaDir['longe'] = fuzz.trapmf(distanciaDir.universe, [2, 10, 25, 25])
 
-distanciaFre['perto'] = fuzz.trapmf(distanciaFre.universe, [0, 0, 0.5, 2])
-distanciaFre['media'] = fuzz.trimf(distanciaFre.universe, [0.5, 2, 10])
+distanciaFre['perto'] = fuzz.trapmf(distanciaFre.universe, [0, 0, 0.01, 0.05])
+distanciaFre['media'] = fuzz.trimf(distanciaFre.universe, [0.01, 2, 10])
 distanciaFre['longe'] = fuzz.trapmf(distanciaFre.universe, [2, 10, 25, 25])
 
 velocidadeEsq['negativa'] = fuzz.trimf(velocidadeEsq.universe, [-1, -1, 0])
 velocidadeEsq['baixa'] = fuzz.trimf(velocidadeEsq.universe, [0, 0, 0.5])
-velocidadeEsq['media'] = fuzz.trimf(velocidadeEsq.universe, [0.5, 5, 8])
-velocidadeEsq['alta'] = fuzz.trapmf(velocidadeEsq.universe, [5, 8, 10, 10])
+velocidadeEsq['media'] = fuzz.trimf(velocidadeEsq.universe, [0.5, 2, 5])
+velocidadeEsq['alta'] = fuzz.trapmf(velocidadeEsq.universe, [2, 5, 8, 10])
 
 velocidadeDir['negativa'] = fuzz.trimf(velocidadeDir.universe, [-1, -1, 0])
 velocidadeDir['baixa'] = fuzz.trimf(velocidadeDir.universe, [0, 0, 0.5])
-velocidadeDir['media'] = fuzz.trimf(velocidadeDir.universe, [0.5, 5, 8])
-velocidadeDir['alta'] = fuzz.trapmf(velocidadeDir.universe, [5, 8, 10, 10])
+velocidadeDir['media'] = fuzz.trimf(velocidadeDir.universe, [0.5, 2, 5])
+velocidadeDir['alta'] = fuzz.trapmf(velocidadeDir.universe, [2, 5, 8, 10])
 
 """### Criando as regras de decisão difusas"""
 
@@ -65,8 +65,10 @@ rule3 = ctrl.Rule(distanciaEsq['media'], velocidadeDir['media'])
 rule4 = ctrl.Rule(distanciaDir['media'], velocidadeEsq['media'])
 rule5 = ctrl.Rule(distanciaEsq['perto'], velocidadeDir['baixa'])
 rule6 = ctrl.Rule(distanciaDir['perto'], velocidadeEsq['baixa'])
-rule7 = ctrl.Rule(distanciaFre['perto'], velocidadeDir['negativa'])
-rule8 = ctrl.Rule(distanciaFre['perto'], velocidadeEsq['negativa'])
+rule8 = ctrl.Rule(distanciaFre['perto'] & distanciaEsq['perto'] & distanciaDir['perto'], velocidadeEsq['baixa'])
+rule7 = ctrl.Rule(distanciaFre['perto'] & distanciaEsq['perto'] & distanciaDir['perto'], velocidadeDir['alta'])
+# rule8 = ctrl.Rule(distanciaFre['perto'] & distanciaDir['perto'], velocidadeDir['baixa'])
+# rule9 = ctrl.Rule(distanciaFre['perto'] & distanciaDir['perto'], velocidadeEsq['alta'])
 
 """### Criando e simulando um controlador nebuloso"""
 
@@ -121,7 +123,7 @@ if clientID != -1:
     while vrep.simxGetConnectionId(clientID) != -1:
         dist = np.zeros(5)
         for i in range(5):
-            erro, state, coord, detectedObjectHandle, detectedSurfaceNormalVector = vrep.simxReadProximitySensor(clientID, sensorHandle[i],vrep.simx_opmode_buffer)
+            erro, state, coord, detectedObjectHandle, detectedSurfaceNormalVector = vrep.simxReadProximitySensor(clientID, sensorHandle[i],vrep.simx_opmode_oneshot_wait)
             if erro == 0:
                 dist[i] = math.sqrt(coord[0]**2 + coord[1]**2 + coord[2]**2)
                 # if state > 0:
@@ -135,8 +137,8 @@ if clientID != -1:
         distFre = dist[2]
         distDir = min(dist[3], dist[4])
 
-        print(distEsq)
-        print(distDir)
+        # print(distEsq)
+        # print(distDir)
 
         # Entrando com alguns valores para qualidade da distanciaEsq e do serviço
         velocidade_simulador.input['distanciaEsq'] = distEsq
